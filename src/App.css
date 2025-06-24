@@ -1,0 +1,93 @@
+body {
+   background-color: #ca2786;
+  transition: background-color 0.3s, color 0.3s;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+body.dark {
+  background-color: #111;
+  color: #fff;
+}
+
+.sudoku-table {
+  border-collapse: collapse;
+  margin: auto;
+  box-shadow: 0 0 10px rgba(233, 226, 226, 0.4);
+}
+
+.sudoku-cell {
+  border: 1px solid #999;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;
+  background-color: white;
+}
+
+body.dark .sudoku-cell {
+  background-color: #222;
+  color: white;
+  border-color: #555;
+}
+
+.sudoku-cell input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  text-align: center;
+  font-size: 1rem;
+  background: transparent;
+  outline: none;
+  color: inherit;
+  font-family: inherit;
+}
+
+.fixed-cell input {
+  font-weight: bold;
+  color: #8b5cf6; /* violet */
+}
+
+/* Clear visible bold inner 3x3 gridlines */
+.sudoku-cell {
+  border: 1px solid #bbb;
+}
+
+/* Thicker outer grid and 3x3 box borders */
+.sudoku-table tr:nth-child(3n) .sudoku-cell {
+  border-bottom: 3px solid rgb(95, 167, 235);
+}
+
+.sudoku-table tr .sudoku-cell:nth-child(3n) {
+  border-right: 3px solid rgb(40, 181, 224);
+}
+
+.sudoku-table tr:first-child .sudoku-cell {
+  border-top: 3px solid rgb(76, 142, 240);
+}
+
+.sudoku-table tr .sudoku-cell:first-child {
+  border-left: 3px solid rgb(45, 102, 226);
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 480px) {
+  .sudoku-cell {
+    width: 30px;
+    height: 30px;
+  }
+  .sudoku-cell input {
+    font-size: 0.8rem;
+  }
+}
