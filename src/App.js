@@ -1,165 +1,411 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useState, useEffect, useRef } from "react";
 
-const SudokuSolver = () => {
-  const easyPuzzle = [
-    ['5','3','','','7','','','',''],
-    ['6','','','1','9','5','','',''],
-    ['','9','8','','','','','6',''],
-    ['8','','','','6','','','','3'],
-    ['4','','','8','','3','','','1'],
-    ['7','','','','2','','','','6'],
-    ['','6','','','','','2','8',''],
-    ['','','','4','1','9','','','5'],
-    ['','','','','8','','','7','9']
-  ];
+const easyPuzzle = [
+  [5,3,0,0,7,0,0,0,0],
+  [6,0,0,1,9,5,0,0,0],
+  [0,9,8,0,0,0,0,6,0],
+  [8,0,0,0,6,0,0,0,3],
+  [4,0,0,8,0,3,0,0,1],
+  [7,0,0,0,2,0,0,0,6],
+  [0,6,0,0,0,0,2,8,0],
+  [0,0,0,4,1,9,0,0,5],
+  [0,0,0,0,8,0,0,7,9]
+];
 
-  const mediumPuzzle = [
-    ['','','3','','2','6','','',''],
-    ['9','','','3','','5','','','1'],
-    ['','','1','8','','6','4','',''],
-    ['','','8','1','','2','9','',''],
-    ['7','','','','','','','','8'],
-    ['','','6','7','','8','2','',''],
-    ['','2','','6','','9','5','',''],
-    ['8','','','2','','3','','','9'],
-    ['','','5','','1','','3','','']
-  ];
+const mediumPuzzle = [
+  [0,0,0,0,6,0,7,0,0],
+  [0,0,0,1,0,9,0,0,0],
+  [3,0,9,0,0,0,0,6,0],
+  [0,5,0,0,0,0,0,0,8],
+  [0,0,6,0,0,0,5,0,0],
+  [7,0,0,0,0,0,0,4,0],
+  [0,2,0,0,0,0,6,0,3],
+  [0,0,0,4,0,3,0,0,0],
+  [0,0,8,0,7,0,0,0,0]
+];
 
-  const hardPuzzle = [
-    ['','','5','3','','','','',''],
-    ['8','','','','','','','2',''],
-    ['','7','','','','','9','',''],
-    ['','5','','','','7','','',''],
-    ['','','','','','','','',''],
-    ['','','','','9','','','','8'],
-    ['','','','','','5','','7',''],
-    ['','','','','','','','',''],
-    ['','','','','','1','','','']
-  ];
+const hardPuzzle = [
+  [0,0,0,6,0,0,4,0,0],
+  [7,0,0,0,0,3,6,0,0],
+  [0,0,0,0,9,1,0,8,0],
+  [0,0,0,0,0,0,0,0,0],
+  [0,5,0,1,8,0,0,0,3],
+  [0,0,0,3,0,6,0,4,5],
+  [0,4,0,2,0,0,0,6,0],
+  [9,0,3,0,0,0,0,0,0],
+  [0,2,0,0,0,0,1,0,0]
+];
 
-  const [grid, setGrid] = useState(easyPuzzle);
-  const [originalGrid, setOriginalGrid] = useState(easyPuzzle);
-  const [secondsElapsed, setSecondsElapsed] = useState(0);
+function cloneGrid(grid) {
+  return grid.map(row => row.slice());
+}
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsElapsed(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (secs) => {
-    const minutes = Math.floor(secs / 60);
-    const seconds = secs % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const isOriginalCell = (row, col) => originalGrid[row][col] !== '';
-
-  const handleCellChange = (row, col, value) => {
-    if (value === '' || (value >= '1' && value <= '9')) {
-      const newGrid = grid.map((r, rIndex) =>
-        r.map((c, cIndex) => (rIndex === row && cIndex === col ? value : c))
-      );
-      setGrid(newGrid);
+// Check if placing num at grid[row][col] is valid
+function isValid(grid, row, col, num) {
+  for (let x = 0; x < 9; x++) {
+    if (grid[row][x] === num) return false; // row
+    if (grid[x][col] === num) return false; // col
+  }
+  // 3x3 box
+  const startRow = Math.floor(row / 3) * 3;
+  const startCol = Math.floor(col / 3) * 3;
+  for (let r = startRow; r < startRow + 3; r++) {
+    for (let c = startCol; c < startCol + 3; c++) {
+      if (grid[r][c] === num) return false;
     }
-  };
+  }
+  return true;
+}
 
-  const isValidMove = (grid, row, col, num) => {
-    for (let x = 0; x < 9; x++) if (grid[row][x] === num || grid[x][col] === num) return false;
-    const startRow = row - (row % 3), startCol = col - (col % 3);
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (grid[i + startRow][j + startCol] === num) return false;
-    return true;
-  };
-
-  const solveSudoku = (grid) => {
-    for (let row = 0; row < 9; row++) {
-      for (let col = 0; col < 9; col++) {
-        if (grid[row][col] === '') {
-          for (let num = 1; num <= 9; num++) {
-            const numStr = num.toString();
-            if (isValidMove(grid, row, col, numStr)) {
-              grid[row][col] = numStr;
-              if (solveSudoku(grid)) return true;
-              grid[row][col] = '';
-            }
+// Backtracking solve sudoku, returns true if solvable
+function solveSudoku(grid) {
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      if (grid[row][col] === 0) {
+        for (let num = 1; num <= 9; num++) {
+          if (isValid(grid, row, col, num)) {
+            grid[row][col] = num;
+            if (solveSudoku(grid)) return true;
+            grid[row][col] = 0;
           }
-          return false;
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+export default function App() {
+  const [board, setBoard] = useState(cloneGrid(easyPuzzle));
+  const [original, setOriginal] = useState(cloneGrid(easyPuzzle));
+  const [timer, setTimer] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [difficulty, setDifficulty] = useState("easy");
+  const [message, setMessage] = useState("");
+  // initialize each row separately to avoid shared references
+  const [customBoard, setCustomBoard] = useState(
+    Array.from({ length: 9 }, () => Array(9).fill(""))
+  );
+  const timerRef = useRef(null);
+
+  // Start timer when board changes
+  useEffect(() => {
+    if (isRunning) {
+      timerRef.current = setInterval(() => {
+        setTimer((t) => t + 1);
+      }, 2000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [isRunning]);
+
+  // Format time as mm:ss
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  // Load puzzle on difficulty change
+  function loadPuzzle(level) {
+    let puzzle;
+    if (level === "easy") puzzle = cloneGrid(easyPuzzle);
+    else if (level === "medium") puzzle = cloneGrid(mediumPuzzle);
+    else puzzle = cloneGrid(hardPuzzle);
+
+    setBoard(puzzle);
+    setOriginal(puzzle);
+    setDifficulty(level);
+    setTimer(0);
+    setMessage("");
+    setIsRunning(true);
+  }
+
+  // Handle cell input only if not original fixed number
+  function handleChange(r, c, e) {
+    const val = e.target.value;
+    if (val === "" || (/^[1-9]$/.test(val))) {
+      setBoard((old) => {
+        const newBoard = cloneGrid(old);
+        newBoard[r][c] = val === "" ? 0 : parseInt(val);
+        return newBoard;
+      });
+    }
+  }
+
+
+  // Solve current board
+  function handleSolve() {
+    const copy = cloneGrid(board);
+    if (solveSudoku(copy)) {
+      setBoard(copy);
+      setMessage("Solved!");
+      setIsRunning(false);
+    } else {
+      setMessage("No solution exists for this board.");
+    }
+  }
+
+  // Validate custom board input
+  function handleCustomChange(r, c, e) {
+    const val = e.target.value;
+    if (val === "" || (/^[1-9]$/.test(val))) {
+      setCustomBoard((old) => {
+        // copy rows so we don't mutate state directly
+        const newBoard = old.map(row => row.slice());
+        newBoard[r][c] = val;
+        return newBoard;
+      });
+    }
+  }
+
+  // Check if custom board is valid sudoku 
+  function isCustomBoardValid(grid) {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const val = grid[r][c];
+        if (val !== 0) { // only check filled cells (numbers 1..9)
+          const num = val; // already a number
+
+          grid[r][c] = 0;
+          if (!isValid(grid, r, c, num)) {
+            grid[r][c] = num; 
+            return false;
+          }
+          grid[r][c] = num; 
         }
       }
     }
     return true;
-  };
+  }
 
-  const solvePuzzle = async () => {
-    const gridCopy = grid.map(row => [...row]);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    if (solveSudoku(gridCopy)) {
-      setGrid(gridCopy);
+  // Handle custom board solve check
+  function handleCustomSolve() {
+    // Convert customBoard strings to int grid (empty -> 0)
+    const intGrid = customBoard.map(row => row.map(val => (val === "" ? 0 : parseInt(val))));
+
+    // Validate given numbers (no duplicates/conflicts)
+    if (!isCustomBoardValid(intGrid)) {
+      setMessage("Invalid board: conflicts found in your input.");
+      return;
     }
-  };
 
-  const resetPuzzle = () => {
-    setGrid(originalGrid.map(row => [...row]));
-    setSecondsElapsed(0);
-  };
-
-  const changeBoard = (type) => {
-    if (type === 'easy') {
-      setGrid(easyPuzzle);
-      setOriginalGrid(easyPuzzle);
-    } else if (type === 'medium') {
-      setGrid(mediumPuzzle);
-      setOriginalGrid(mediumPuzzle);
+    // Try to solve
+    const copy = cloneGrid(intGrid);
+    if (solveSudoku(copy)) {
+      setMessage("Valid board! Solution exists.");
+      // populate the custom board inputs with solution (as strings)
+      setCustomBoard(copy.map(row => row.map(num => num === 0 ? "" : String(num))));
     } else {
-      setGrid(hardPuzzle);
-      setOriginalGrid(hardPuzzle);
+      setMessage("No solution exists for this board.");
     }
-    setSecondsElapsed(0);
-  };
+  }
+
+  // Toggle dark/light mode
+  function toggleDarkMode() {
+    setDarkMode(!darkMode);
+  }
+
+  // Restart current puzzle
+  function restartPuzzle() {
+    setBoard(cloneGrid(original));
+    setTimer(0);
+    setMessage("");
+    setIsRunning(true);
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-2">
-      <div className="w-full max-w-md py-6">
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-bold text-violet-500 mb-1">Sudoku Solver</h1>
-          <p className="text-sm">Place numbers 1-9 in the empty boxes</p>
-          <p className="text-xs mt-1">⏱ {formatTime(secondsElapsed)}</p>
-        </div>
+    <div className={darkMode ? "app dark" : "app"}>
+      <header>
+        <h1>Sudoku Solver</h1>
+        {/* simple button instead of slider */}
+        <button onClick={toggleDarkMode}>
+          {darkMode ? "Light Mode" : "Dark Mode"}
+        </button>
+      </header>
 
-        <div className="flex flex-wrap justify-center gap-2 mb-4">
-          <button onClick={() => changeBoard('easy')} className="px-2 py-1 text-sm rounded bg-green-500 text-white">Easy</button>
-          <button onClick={() => changeBoard('medium')} className="px-2 py-1 text-sm rounded bg-yellow-500 text-white">Medium</button>
-          <button onClick={() => changeBoard('hard')} className="px-2 py-1 text-sm rounded bg-red-500 text-white">Hard</button>
-          <button onClick={solvePuzzle} className="px-2 py-1 text-sm rounded bg-blue-600 text-white">Solve</button>
-          <button onClick={resetPuzzle} className="px-2 py-1 text-sm rounded bg-gray-600 text-white">Reset</button>
-        </div>
+      <section className="controls">
+        <select value={difficulty} onChange={(e) => loadPuzzle(e.target.value)}>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button onClick={restartPuzzle}>Restart</button>
+        <button onClick={handleSolve}>Solve</button>
+        <div className="timer">Timer: {formatTime(timer)}</div>
+      </section>
 
-        <div className="flex justify-center">
-          <table className="sudoku-table">
-            <tbody>
-              {grid.map((row, rowIndex) => (
-                <tr key={rowIndex}>
-                  {row.map((cell, colIndex) => (
-                    <td key={colIndex} className={`sudoku-cell ${isOriginalCell(rowIndex, colIndex) ? 'fixed-cell' : ''}`}>
+      <section className="board-section">
+        <table className="sudoku-board">
+          <tbody>
+            {board.map((row, r) => (
+              <tr key={r}>
+                {row.map((val, c) => (
+                  <td key={c} className={
+                    ( (r === 2 || r === 5) ? "border-bottom " : "" ) +
+                    ( (c === 2 || c === 5) ? "border-right " : "" )
+                  }>
+                    {original[r][c] !== 0 ? (
+                      <input type="text" value={val} readOnly className="fixed-cell" />
+                    ) : (
                       <input
                         type="text"
-                        maxLength="1"
-                        value={cell}
-                        onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                        disabled={isOriginalCell(rowIndex, colIndex)}
+                        value={val === 0 ? "" : val}
+                        onChange={(e) => handleChange(r, c, e)}
+                        maxLength={1}
+                        className="input-cell"
                       />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="custom-section">
+        <h2>Create Your Own Sudoku</h2>
+        <p>Fill cells and check if a valid solution exists.</p>
+        <table className="sudoku-board custom-board">
+          <tbody>
+            {customBoard.map((row, r) => (
+              <tr key={r}>
+                {row.map((val, c) => (
+                  <td key={c} className={
+                    ( (r === 2 || r === 5) ? "border-bottom " : "" ) +
+                    ( (c === 2 || c === 5) ? "border-right " : "" )
+                  }>
+                    <input
+                      type="text"
+                      value={val}
+                      onChange={(e) => handleCustomChange(r, c, e)}
+                      maxLength={1}
+                      className="input-cell"
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <button onClick={handleCustomSolve}>Check Validity & Solve</button>
+      </section>
+
+      {message && <div className="message">{message}</div>}
+
+    
+      <style>{`
+         {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+          font-family: Arial, sans-serif;
+          background: ${darkMode ? "#222" : "#f7f7f7"};
+          color: ${darkMode ? "#eee" : "#222"};
+        }
+        .app {
+          max-width: 600px;
+          margin: auto;
+          padding: 1rem;
+        }
+        header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+        h1 {
+          margin: 0;
+        }
+        .controls {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          margin-bottom: 1rem;
+          flex-wrap: wrap;
+        }
+        select, button {
+          padding: 0.5rem 1rem;
+          font-size: 1rem;
+          cursor: pointer;
+        }
+        .timer {
+          font-weight: bold;
+          margin-left: auto;
+          font-size: 1.1rem;
+        }
+        .sudoku-board {
+          border-collapse: collapse;
+          margin: auto;
+          user-select: none;
+          width: 100%;
+          max-width: 500px; /* fits well on laptops */
+        }
+        .sudoku-board td {
+          border: 1px solid #999;
+          aspect-ratio: 1 / 1; /* keeps cells square */
+          text-align: center;
+          vertical-align: middle;
+          padding: 0;
+          position: relative;
+          background: ${darkMode ? "#333" : "white"};
+        }
+        .sudoku-board td.border-right {
+          border-right: 3px solid ${darkMode ? "#aaa" : "#222"};
+        }
+        .sudoku-board td.border-bottom {
+          border-bottom: 3px solid ${darkMode ? "#aaa" : "#222"};
+        }
+        input.input-cell {
+          width: 100%;
+          height: 100%;
+          border: none;
+          text-align: center;
+          font-size: 1.2rem;
+          background: transparent;
+          color: ${darkMode ? "white" : "black"};
+        }
+        input.input-cell:focus {
+          outline: 2px solid #4caf50;
+        }
+        input.fixed-cell {
+          background: ${darkMode ? "#555" : "#ddd"};
+          font-weight: bold;
+          cursor: default;
+          user-select: none;
+        }
+        .custom-section {
+          margin-top: 2rem;
+          text-align: center;
+        }
+        button {
+          border: none;
+          border-radius: 4px;
+          background-color: #4caf50;
+          color: white;
+          transition: background-color 0.3s ease;
+        }
+        button:hover {
+          background-color: #45a049;
+        }
+        .message {
+          margin-top: 1rem;
+          font-weight: bold;
+          text-align: center;
+          font-size: 1.1rem;
+          color: ${message.includes("Invalid") || message.includes("No solution") ? "red" : "green"};
+        }
+          
+          
+      `}
+      
+      </style>
     </div>
   );
-};
+}
 
-export default SudokuSolver;
